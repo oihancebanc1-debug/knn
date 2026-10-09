@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KNN Lab — Predicción de Alumnos</title>
+  <style>
+    :root {
+      --bg: #0b1329;
+      --card-bg: #111c38;
+      --border: #1e2d54;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --blue: #38bdf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --gold: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 900px) {
+      .grid {
+        grid-template-columns: 340px 1fr;
+      }
+    }
+
+    .panel {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .panel-title {
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .control-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .val-badge {
+      color: var(--blue);
+      font-weight: 800;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--blue);
+      cursor: pointer;
+    }
+
+    .result-box {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      background-color: rgba(255, 255, 255, 0.03);
+      border: 1px dashed var(--border);
+    }
+
+    .result-title {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .result-class {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin: 6px 0;
+    }
+
+    .pass { color: var(--green); }
+    .fail { color: var(--red); }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 12px;
+      font-size: 0.85rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    canvas {
+      background-color: #060c1a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: crosshair;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .info-section {
+      margin-top: 20px;
+      grid-column: 1 / -1;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .step-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .step-card h3 {
+      font-size: 1rem;
+      color: var(--blue);
+      margin-bottom: 5px;
+    }
+
+    .step-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Clasificador de Alumnos con KNN</h1>
+      <p>Predicción sobre si un alumno <b>Aprobará</b> o <b>Suspenderá</b> según su Asistencia y Horas de estudio.</p>
+    </header>
+
+    <div class="grid">
+      <div class="panel">
+        <h2 class="panel-title">Datos del Alumno</h2>
+        
+        <div class="control-group">
+          <label for="attendance">Asistencia a clase: <span class="val-badge" id="attDisplay">75%</span></label>
+          <input type="range" id="attendance" min="0" max="100" step="5" value="75">
+        </div>
+
+        <div class="control-group">
+          <label for="hours">Horas de estudio/semana: <span class="val-badge" id="hoursDisplay">8 h</span></label>
+          <input type="range" id="hours" min="0" max="12" step="0.5" value="8">
+        </div>
+
+        <div class="control-group">
+          <label for="kVal">Vecinos cercanos (K): <span class="val-badge" id="kDisplay">5</span></label>
+          <input type="range" id="kVal" min="1" max="9" step="2" value="5">
+        </div>
+
+        <div class="result-box">
+          <div class="result-title">Predicción para el alumno</div>
+          <div id="resultClass" class="result-class pass">APROBADO</div>
+          <div id="votesDetail" style="font-size: 0.85rem; color: var(--muted);">
+            4 de 5 vecinos aprobaron.
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item"><span class="dot" style="background: var(--green)"></span> Aprobado</div>
+          <div class="legend-item"><span class="dot" style="background: var(--red)"></span> Suspendido</div>
+          <div class="legend-item"><span class="dot" style="background: var(--gold)"></span> Alumno Nuevo</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Mapa de Distribución (Asistencia vs Horas)</h2>
+        <div class="canvas-container">
+          <canvas id="knnCanvas" width="600" height="400"></canvas>
+        </div>
+      </div>
+
+      <div class="panel info-section">
+        <h2 class="panel-title">¿Cómo funciona este modelo?</h2>
+        <div class="steps">
+          <div class="step-card">
+            <h3>1. Medición de distancia</h3>
+            <p>Compara el porcentaje de asistencia y horas de estudio del alumno nuevo con los datos históricos de 24 alumnos conocidos.</p>
+          </div>
+          <div class="step-card">
+            <h3>2. Selección de K Vecinos</h3>
+            <p>Busca los <b>K</b> alumnos más cercanos visualmente en el mapa (normalizando las escalas de asistencia y horas).</p>
+          </div>
+          <div class="step-card">
+            <h3>3. Predicción por Mayoría</h3>
+            <p>Si la mayoría de los vecinos cercanos aprobaron, se predice que el nuevo alumno también aprobará.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const dataset = [
+      { a: 20, h: 1, p: 0 }, { a: 35, h: 2, p: 0 }, { a: 55, h: 2.5, p: 0 },
+      { a: 30, h: 3, p: 0 }, { a: 60, h: 3.5, p: 0 }, { a: 45, h: 4, p: 0 },
+      { a: 70, h: 4, p: 1 }, { a: 50, h: 5, p: 0 }, { a: 65, h: 5, p: 1 },
+      { a: 80, h: 5.5, p: 1 }, { a: 55, h: 6, p: 1 }, { a: 75, h: 6, p: 1 },
+      { a: 65, h: 7, p: 1 }, { a: 90, h: 7, p: 1 }, { a: 80, h: 8, p: 1 },
+      { a: 95, h: 8.5, p: 1 }, { a: 70, h: 9, p: 1 }, { a: 50, h: 9, p: 0 },
+      { a: 75, h: 1.5, p: 0 }, { a: 85, h: 3, p: 1 }, { a: 40, h: 6.5, p: 0 },
+      { a: 58, h: 7.5, p: 0 }, { a: 85, h: 10, p: 1 }, { a: 68, h: 11, p: 1 }
+    ];
+
+    const canvas = document.getElementById('knnCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const attInput = document.getElementById('attendance');
+    const hoursInput = document.getElementById('hours');
+    const kInput = document.getElementById('kVal');
+
+    const attDisplay = document.getElementById('attDisplay');
+    const hoursDisplay = document.getElementById('hoursDisplay');
+    const kDisplay = document.getElementById('kDisplay');
+
+    const resultClass = document.getElementById('resultClass');
+    const votesDetail = document.getElementById('votesDetail');
+
+    const padding = { left: 50, right: 20, top: 20, bottom: 40 };
+    const chartW = canvas.width - padding.left - padding.right;
+    const chartH = canvas.height - padding.top - padding.bottom;
+
+    function toX(hours) {
+      return padding.left + (hours / 12) * chartW;
+    }
+
+    function toY(att) {
+      return padding.top + ((100 - att) / 100) * chartH;
+    }
+
+    function fromX(x) {
+      return Math.max(0, Math.min(12, ((x - padding.left) / chartW) * 12));
+    }
+
+    function fromY(y) {
+      return Math.max(0, Math.min(100, 100 - ((y - padding.top) / chartH) * 100));
+    }
+
+    function update() {
+      const currentAtt = parseFloat(attInput.value);
+      const currentHours = parseFloat(hoursInput.value);
+      const K = parseInt(kInput.value);
+
+      attDisplay.textContent = `${currentAtt}%`;
+      hoursDisplay.textContent = `${currentHours} h`;
+      kDisplay.textContent = K;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = '#1e2d54';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+
+      for (let h = 0; h <= 12; h += 2) {
+        const x = toX(h);
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, canvas.height - padding.bottom);
+        ctx.stroke();
+        ctx.fillText(`${h}h`, x - 8, canvas.height - 15);
+      }
+
+      for (let a = 0; a <= 100; a += 20) {
+        const y = toY(a);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(canvas.width - padding.right, y);
+        ctx.stroke();
+        ctx.fillText(`${a}%`, 15, y + 4);
+      }
+
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('Horas de estudio semanal', canvas.width / 2 - 60, canvas.height - 2);
+
+      let ranked = dataset.map(item => {
+        let dx = (item.h - currentHours) / 12;
+        let dy = (item.a - currentAtt) / 100;
+        let dist = Math.hypot(dx, dy);
+        return { ...item, dist };
+      }).sort((a, b) => a.dist - b.dist);
+
+      const neighbors = ranked.slice(0, K);
+      let passCount = neighbors.filter(n => n.p === 1).length;
+      let failCount = K - passCount;
+
+      const newX = toX(currentHours);
+      const newY = toY(currentAtt);
+
+      for (let n of neighbors) {
+        const nx = toX(n.h);
+        const ny = toY(n.a);
+
+        ctx.beginPath();
+        ctx.moveTo(newX, newY);
+        ctx.lineTo(nx, ny);
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.arc(nx, ny, 9, 0, Math.PI * 2);
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      for (let item of dataset) {
+        ctx.beginPath();
+        ctx.arc(toX(item.h), toY(item.a), 6, 0, Math.PI * 2);
+        ctx.fillStyle = item.p === 1 ? '#22c55e' : '#ef4444';
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(newX, newY, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      const isPass = passCount > failCount;
+      resultClass.textContent = isPass ? 'APROBADO' : 'SUSPENDIDO';
+      resultClass.className = `result-class ${isPass ? 'pass' : 'fail'}`;
+      votesDetail.textContent = `${passCount} de los ${K} vecinos más cercanos aprobaron.`;
+    }
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      hoursInput.value = fromX(clickX).toFixed(1);
+      attInput.value = Math.round(fromY(clickY));
+      update();
+    });
+
+    attInput.addEventListener('input', update);
+    hoursInput.addEventListener('input', update);
+    kInput.addEventListener('input', update);
+
+    update();
+  </script>
+
+</body>
+</html>
